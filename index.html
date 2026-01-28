@@ -6,7 +6,7 @@
     <title>Visual Style Encyclopedia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // 防止 "process is not defined" 錯誤導致網頁崩潰
+      // Global polyfill for process.env to prevent runtime errors
       window.process = { env: { NODE_ENV: 'production' } };
     </script>
     <style>
@@ -45,11 +45,9 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
