@@ -8,7 +8,5 @@ export default defineConfig({
   build: {
     outDir: 'dist',
   },
-  define: {
-    'process.env': {} 
-  }
+  // Removed the "define" block for process.env to allow accessing process.env.API_KEY
 });
