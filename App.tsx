@@ -20,7 +20,7 @@ export default function App() {
   const [hasApiKey, setHasApiKey] = useState(!!process.env.API_KEY);
   const [showEnglishPrompts, setShowEnglishPrompts] = useState(false); // Toggle state
 
-  // Load data on mount (LocalStorage + Default JSON)
+  // Load data on mount (LocalStorage + Static Images + Default JSON)
   useEffect(() => {
     const initializeData = async () => {
       let loadedFromLocal = false;
@@ -39,14 +39,35 @@ export default function App() {
         }
       }
 
-      // 2. Try fetching default configuration (visual-styles-default.json)
-      // This is useful for GitHub Pages deployment where a default set of images/favorites is provided.
+      // 2. Load Static Images via Manifest (GitHub Pages optimized)
+      // Instead of loading one giant JSON, we check a lightweight manifest list
+      // and point the URLs to the static ./images/ folder.
+      try {
+        const manifestRes = await fetch('./images/manifest.json');
+        if (manifestRes.ok) {
+          const availableIds: string[] = await manifestRes.json();
+          const staticImageMap: GeneratedImagesMap = {};
+          
+          availableIds.forEach(id => {
+            // We store the path to the image instead of the base64 data
+            staticImageMap[id] = `./images/${id}.png`;
+          });
+          
+          setGeneratedImages(prev => ({ ...prev, ...staticImageMap }));
+          console.log(`Loaded ${availableIds.length} static images from manifest.`);
+        }
+      } catch (error) {
+        console.log("No static image manifest found (images/manifest.json). Skipping static load.");
+      }
+
+      // 3. Try fetching legacy default configuration (visual-styles-default.json)
+      // Kept for backward compatibility or sharing small config sets (favorites only)
       try {
         const response = await fetch('./visual-styles-default.json');
         if (response.ok) {
           const data = await response.json();
           
-          // Load images (Merge with existing)
+          // Merge images if they exist in the JSON (Base64) - priority over static if needed, or additive
           if (data.images && typeof data.images === 'object') {
             setGeneratedImages(prev => ({ ...prev, ...data.images }));
           }
@@ -55,15 +76,12 @@ export default function App() {
           if (!loadedFromLocal && data.favorites && Array.isArray(data.favorites)) {
             setFavorites(new Set(data.favorites));
           }
-          
-          console.log("Default configuration loaded.");
         }
       } catch (error) {
-        // It's normal for this file to be missing in dev or if not uploaded
-        console.log("No default configuration file found.");
+        // It's normal for this file to be missing
       }
 
-      // 3. Check API Key
+      // 4. Check API Key
       checkApiKey();
     };
 
@@ -87,10 +105,10 @@ export default function App() {
      if (aistudio) {
         await aistudio.openSelectKey();
         await checkApiKey();
-        // Force re-render of components that might rely on new key by reloading or state update
+        // Force re-render
         window.location.reload(); 
      } else {
-        alert("API Key selection is only available in the Project IDX / GenAI environment. Otherwise, set the API Key in your environment variables.");
+        alert("API Key selection is only available in the Project IDX / GenAI environment.");
      }
   };
 
@@ -117,12 +135,11 @@ export default function App() {
 
   // Import / Export
   const handleExport = () => {
-    // Export both favorites and the generated image data
     const exportData = {
       version: 1,
       timestamp: new Date().toISOString(),
       favorites: Array.from(favorites),
-      images: generatedImages
+      images: generatedImages // Exports base64 images currently in memory
     };
     
     const data = JSON.stringify(exportData, null, 2);
@@ -148,7 +165,6 @@ export default function App() {
         let restoredImagesCount = 0;
         let restoredFavsCount = 0;
 
-        // Check for new format (with 'images' and 'favorites' keys)
         if (parsed.favorites || parsed.images) {
             if (Array.isArray(parsed.favorites)) {
                 setFavorites(new Set(parsed.favorites));
@@ -160,7 +176,6 @@ export default function App() {
             }
             alert(`Success! Restored ${restoredFavsCount} favorites and ${restoredImagesCount} images.`);
         } 
-        // Fallback for legacy format (just array of favorites)
         else if (Array.isArray(parsed)) {
           setFavorites(new Set(parsed));
           alert(`Imported ${parsed.length} favorites.`);
@@ -171,7 +186,6 @@ export default function App() {
         console.error(err);
         alert("Failed to import file. Invalid JSON structure.");
       }
-      // Reset input value to allow re-importing same file if needed
       e.target.value = '';
     };
     reader.readAsText(file);
@@ -181,7 +195,6 @@ export default function App() {
   const filteredItems = useMemo(() => {
     let items: StyleItem[] = [];
     
-    // 1. Flatten items based on category selection
     if (activeCategory === 'all') {
       items = CATEGORIES.flatMap(c => c.items);
     } else {
@@ -189,8 +202,6 @@ export default function App() {
       items = cat ? cat.items : [];
     }
 
-    // 2. Filter by Search
-    // Search both Name (Chinese) and Prompt (English)
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       items = items.filter(i => 
@@ -200,7 +211,6 @@ export default function App() {
       );
     }
 
-    // 3. Filter by Favorites Toggle
     if (showFavoritesOnly) {
       items = items.filter(i => favorites.has(i.id));
     }

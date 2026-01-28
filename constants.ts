@@ -173,7 +173,9 @@ const buildPrompt = (name: string, categoryId: string): string => {
   const specificDesc = STYLE_DICTIONARY[name];
   const categoryDesc = CATEGORY_PROMPTS[categoryId] || "artistic style";
   const styleDescription = specificDesc ? specificDesc : `${name} art style, ${categoryDesc}`;
-  return `A masterpiece portrait of a character in ${styleDescription}. Best quality, highly detailed, expressive features, 8k resolution, distinct visual identity of ${name}.`;
+  
+  // Updated Prompt Logic: Strictly enforcing "human character" subject
+  return `A masterpiece portrait of a single human character in ${styleDescription}. Best quality, highly detailed, expressive features, 8k resolution, distinct visual identity of ${name}, centered composition, looking at viewer.`;
 };
 
 // Helper to construct the full Chinese description
