@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const generateImage = async (prompt: string): Promise<string> => {
   const apiKey = process.env.API_KEY;
